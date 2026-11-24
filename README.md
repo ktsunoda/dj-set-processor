@@ -7,20 +7,20 @@ Turn VirtualDJ history files in Google Drive into a play history in Google Sheet
 Use a UTF-8 VirtualDJ `.m3u` export with `#EXTVDJ` metadata. Put it directly in the configured Drive folder. A filename starts with a date, followed by an optional two-digit set part, the event name, and a tag group immediately before `.m3u`.
 
 ```text
-2026.10.10 01 Atlanta Swing Classic [DH; P].m3u
+2026.10.10 01 Atlanta Swing Classic [DH; SP].m3u
 2026.10.10 02 Atlanta Swing Classic [DH].m3u
-2026.10.12 Sea to Sky (P).m3u
+2026.10.12 Sea to Sky (SP).m3u
 ```
 
 | Tag | Result |
 | --- | --- |
 | `DH` | Append plays to the tab for the filename's year, preserving order and repeats. |
-| `P` | Create a Spotify playlist named `YYYY.MM.DD Event` from matched plays. |
-| `DH; P` or `P; DH` | Run both in the listed order. |
+| `SP` | Create a Spotify playlist named `YYYY.MM.DD Event` from matched plays. |
+| `DH; SP` or `SP; DH` | Run both in the listed order. |
 
 Files with no pending tags are skipped. The processor handles older dates first and sorts parts of the same event and date numerically. Tag all parts before a run if their relative order matters.
 
-After an attempt, the processor renames the file with `✅` for success or `❌` for failure. For example, `[DH ✅; P ❌]` means Sheets succeeded and Spotify needs review. Remove just the relevant emoji to request that workflow again. A retry can append the same plays or create another Spotify playlist with the same name. If the output succeeded but the Drive rename failed, check the destination before retrying. Spotify may skip unmatched tracks and reports the count in its logs.
+After an attempt, the processor renames the file with `✅` for success or `❌` for failure. For example, `[DH ✅; SP ❌]` means Sheets succeeded and Spotify needs review. Remove just the relevant emoji to request that workflow again. A retry can append the same plays or create another Spotify playlist with the same name. If the output succeeded but the Drive rename failed, check the destination before retrying. Spotify may skip unmatched tracks and reports the count in its logs.
 
 ## Set up your accounts
 

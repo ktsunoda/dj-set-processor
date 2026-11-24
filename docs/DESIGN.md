@@ -4,11 +4,11 @@ One Python command scans a configured Google Drive folder for VirtualDJ M3U file
 
 ## Filenames and workflow state
 
-Read a single tag group directly before `.m3u`. Accept parentheses or square brackets and separate tokens with semicolons. Accept `DH` and `P` in either order, with each workflow appearing once. Trim surrounding whitespace on each token. Only the exact case-sensitive tokens `DH` and `P` are runnable. A checkmark means the output succeeded. A red X means it failed and needs manual review.
+Read a single tag group directly before `.m3u`. Accept parentheses or square brackets and separate tokens with semicolons. Accept `DH` and `SP` in either order, with each workflow appearing once. Trim surrounding whitespace on each token. Only the exact case-sensitive tokens `DH` and `SP` are runnable. A checkmark means the output succeeded. A red X means it failed and needs manual review.
 
 ```text
-2026.10.10 01 Atlanta Swing Classic [DH; P].m3u
-2026.10.10 01 Atlanta Swing Classic [DH ✅; P ❌].m3u
+2026.10.10 01 Atlanta Swing Classic [DH; SP].m3u
+2026.10.10 01 Atlanta Swing Classic [DH ✅; SP ❌].m3u
 ```
 
 Process pending tokens in the listed order. After each attempt, immediately save its status by renaming the file, keeping the other tokens and the original delimiters. Continue with the other pending workflow after saving a failure marker. Skip both completed and failed tokens on subsequent runs. Remove an emoji to request that workflow again. The filename is the only workflow state.
@@ -24,7 +24,7 @@ If a status rename fails, stop work on that file and continue with other files. 
 
 ## Spotify
 
-Each attempt creates and populates a new playlist named `YYYY.MM.DD Event`. For example, `2026.10.10 01 Atlanta Swing Classic [DH ✅; P].m3u` creates `2026.10.10 Atlanta Swing Classic`. Parts and repeat attempts can create separate playlists with the same name. A manual retry after a partial write can create another playlist.
+Each attempt creates and populates a new playlist named `YYYY.MM.DD Event`. For example, `2026.10.10 01 Atlanta Swing Classic [DH ✅; SP].m3u` creates `2026.10.10 Atlanta Swing Classic`. Parts and repeat attempts can create separate playlists with the same name. A manual retry after a partial write can create another playlist.
 
 ## Verification
 

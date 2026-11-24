@@ -13,7 +13,7 @@ from virtualdj import parse_m3u
 LOGGER = logging.getLogger(__name__)
 TAG_GROUP = re.compile(r" (?P<group>\([^()]*\)|\[[^\[\]]*\])\.m3u$")
 SET_NAME = re.compile(r"(?P<date>[0-9]{4}\.[0-9]{2}\.[0-9]{2}) (?:(?P<part>[0-9]{2}) )?(?P<event>.+)")
-WORKFLOWS = ("DH", "P")
+WORKFLOWS = ("DH", "SP")
 VALID_TOKENS = {code + marker for code in WORKFLOWS for marker in ("", " ✅", " ❌")}
 
 

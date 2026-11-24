@@ -12,6 +12,6 @@ Use a Spotify Developer Dashboard app that the playlist owner's account can auth
 3. Enter the app's client ID and client secret in the terminal when prompted. Approve private playlist access in the browser. The browser may show a connection error at the local callback. Copy the full address bar URL into the waiting terminal prompt. The helper saves credentials with owner-only permissions. Keep the secret, callback URL, and refresh token out of chat and Git.
 4. For local tests, load the file with `source ~/.config/dj-set-processor/spotify.env` and run the normal collector command against the test Drive folder and workbook. Enter the same three Spotify settings in Render for deployment.
 
-A bare `P` enables a Spotify attempt when the collector has Spotify configuration. It creates a private playlist from matching tracks, in set order, with repeats. Unmatched plays are skipped and counted in logs. A set with no matching tracks fails without creating a playlist.
+A bare `SP` enables a Spotify attempt when the collector has Spotify configuration. It creates a private playlist from matching tracks, in set order, with repeats. Unmatched plays are skipped and counted in logs. A set with no matching tracks fails without creating a playlist.
 
 Matching prefers the original title and artist credit. When filtered search does not yield a verified match, the collector also tries a plain-text search with the title and artist together. Both searches check Spotify's artist credits and retain version labels such as Radio Edit, Live, and Remix.

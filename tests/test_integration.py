@@ -108,7 +108,7 @@ class FakeAPIs:
         if method == "POST" and path == "/v1/playlists/test-playlist/items":
             if self.fail_spotify_items:
                 return self.response({"error": "item batch rejected"}, status=500)
-            self.actions.append((self.current_file, "P"))
+            self.actions.append((self.current_file, "SP"))
             self.playlist_items.append(json.loads(request.body)["uris"])
             return self.response({"snapshot_id": "test-snapshot"}, status=201)
         raise AssertionError(f"Unexpected Spotify request {method} {path}")
@@ -145,32 +145,33 @@ class CronIntegrationTests(unittest.TestCase):
             "part2": "2026.10.09 02 Example [DH].m3u",
             "part1": "2026.10.09 01 Example [DH].m3u",
             "untagged": "2026.10.01 Example.m3u",
-            "retired-tag": "2026.10.01 Example [S].m3u",
+            "old-s-tag": "2026.10.01 Example [S].m3u",
+            "old-p-tag": "2026.10.01 Example [P].m3u",
             "dh": "2026.10.02 Example [DH].m3u",
-            "s": "2026.10.03 Example (P).m3u",
-            "dh-s": "2026.10.04 Example [DH; P].m3u",
-            "s-dh": "2026.10.05 Example (P; DH).m3u",
-            "pending-s": "2026.10.06 Example [DH ✅; P].m3u",
-            "pending-dh": "2026.10.07 Example (P ✅; DH).m3u",
-            "finished": "2026.10.08 Example [DH ✅; P ❌].m3u",
+            "s": "2026.10.03 Example (SP).m3u",
+            "dh-s": "2026.10.04 Example [DH; SP].m3u",
+            "s-dh": "2026.10.05 Example (SP; DH).m3u",
+            "pending-s": "2026.10.06 Example [DH ✅; SP].m3u",
+            "pending-dh": "2026.10.07 Example (SP ✅; DH).m3u",
+            "finished": "2026.10.08 Example [DH ✅; SP ❌].m3u",
         })
         self.assertEqual(self.run_cron(api), 0)
         self.assertEqual(api.list_pages, [None, ["remaining"]])
         self.assertEqual(api.downloads, ["dh", "s", "dh-s", "s-dh", "pending-s", "pending-dh", "part1", "part2"])
         self.assertEqual(api.actions, [
-            ("dh", "DH"), ("s", "P"), ("dh-s", "DH"), ("dh-s", "P"),
-            ("s-dh", "P"), ("s-dh", "DH"), ("pending-s", "P"),
+            ("dh", "DH"), ("s", "SP"), ("dh-s", "DH"), ("dh-s", "SP"),
+            ("s-dh", "SP"), ("s-dh", "DH"), ("pending-s", "SP"),
             ("pending-dh", "DH"), ("part1", "DH"), ("part2", "DH"),
         ])
         self.assertEqual(api.renames, [
             ("dh", "2026.10.02 Example [DH ✅].m3u"),
-            ("s", "2026.10.03 Example (P ✅).m3u"),
-            ("dh-s", "2026.10.04 Example [DH ✅; P].m3u"),
-            ("dh-s", "2026.10.04 Example [DH ✅; P ✅].m3u"),
-            ("s-dh", "2026.10.05 Example (P ✅; DH).m3u"),
-            ("s-dh", "2026.10.05 Example (P ✅; DH ✅).m3u"),
-            ("pending-s", "2026.10.06 Example [DH ✅; P ✅].m3u"),
-            ("pending-dh", "2026.10.07 Example (P ✅; DH ✅).m3u"),
+            ("s", "2026.10.03 Example (SP ✅).m3u"),
+            ("dh-s", "2026.10.04 Example [DH ✅; SP].m3u"),
+            ("dh-s", "2026.10.04 Example [DH ✅; SP ✅].m3u"),
+            ("s-dh", "2026.10.05 Example (SP ✅; DH).m3u"),
+            ("s-dh", "2026.10.05 Example (SP ✅; DH ✅).m3u"),
+            ("pending-s", "2026.10.06 Example [DH ✅; SP ✅].m3u"),
+            ("pending-dh", "2026.10.07 Example (SP ✅; DH ✅).m3u"),
             ("part1", "2026.10.09 01 Example [DH ✅].m3u"),
             ("part2", "2026.10.09 02 Example [DH ✅].m3u"),
         ])
@@ -222,35 +223,35 @@ class CronIntegrationTests(unittest.TestCase):
                 self.assertFalse(any("repeatCell" in request for request in other))
 
     def test_spotify_write_failure_saves_red_x_and_history_still_runs(self):
-        api = FakeAPIs({"mixed": "2026.10.10 Example [P; DH].m3u"})
+        api = FakeAPIs({"mixed": "2026.10.10 Example [SP; DH].m3u"})
         api.fail_spotify_items = True
         self.assertEqual(self.run_cron(api), 1)
         self.assertEqual(api.actions, [("mixed", "DH")])
         self.assertEqual(api.renames, [
-            ("mixed", "2026.10.10 Example [P ❌; DH].m3u"),
-            ("mixed", "2026.10.10 Example [P ❌; DH ✅].m3u"),
+            ("mixed", "2026.10.10 Example [SP ❌; DH].m3u"),
+            ("mixed", "2026.10.10 Example [SP ❌; DH ✅].m3u"),
         ])
         self.assertEqual(self.run_cron(api), 0)
         self.assertEqual((len(api.playlists), len(api.sheet_writes)), (1, 1))
 
     def test_missing_year_template_saves_red_x_and_spotify_still_runs(self):
-        api = FakeAPIs({"mixed": "2099.10.10 Example [DH; P].m3u"})
+        api = FakeAPIs({"mixed": "2099.10.10 Example [DH; SP].m3u"})
         self.assertEqual(self.run_cron(api), 1)
-        self.assertEqual(api.actions, [("mixed", "P")])
+        self.assertEqual(api.actions, [("mixed", "SP")])
         self.assertEqual(api.renames, [
-            ("mixed", "2099.10.10 Example [DH ❌; P].m3u"),
-            ("mixed", "2099.10.10 Example [DH ❌; P ✅].m3u"),
+            ("mixed", "2099.10.10 Example [DH ❌; SP].m3u"),
+            ("mixed", "2099.10.10 Example [DH ❌; SP ✅].m3u"),
         ])
         self.assertEqual(self.run_cron(api), 0)
         self.assertEqual((len(api.playlists), len(api.sheet_writes)), (1, 0))
 
     def test_rename_failure_stops_file_but_other_files_continue(self):
         api = FakeAPIs({
-            "stuck": "2026.10.10 Example [DH; P].m3u",
+            "stuck": "2026.10.10 Example [DH; SP].m3u",
             "next": "2026.10.11 Example [DH].m3u",
         })
         api.fail_rename_for = "stuck"
         self.assertEqual(self.run_cron(api), 1)
         self.assertEqual(api.actions, [("stuck", "DH"), ("next", "DH")])
-        self.assertEqual(api.files["stuck"], "2026.10.10 Example [DH; P].m3u")
+        self.assertEqual(api.files["stuck"], "2026.10.10 Example [DH; SP].m3u")
         self.assertEqual(api.files["next"], "2026.10.11 Example [DH ✅].m3u")
