@@ -72,6 +72,20 @@ def song_key(song, artist):
     return tuple(" ".join(value.casefold().split()) for value in (song, artist))
 
 
+def bumper_song_keys(rows):
+    headers = [str(value).strip().casefold() for value in rows[0]] if rows else []
+    if headers.count("song") != 1 or headers.count("artist") != 1:
+        raise ValueError("Bumper Music needs one Song header and one Artist header in row 1")
+    song_column = headers.index("song")
+    artist_column = headers.index("artist")
+    return {
+        song_key(row[song_column], row[artist_column])
+        for row in rows[1:]
+        if len(row) > max(song_column, artist_column)
+        and row[song_column] and row[artist_column]
+    }
+
+
 class HistorySheet:
     def __init__(self, session, workbook_id):
         self.session = session
@@ -95,7 +109,7 @@ class HistorySheet:
         values = self.read(
             "/values:batchGet",
             ranges=[f"'{source_year}'!A1:B", f"'{source_year}'!A1:L2",
-                    "'Event Details'!B2:B", "'Bumper Music'!A2:B"],
+                    "'Event Details'!B2:B", "'Bumper Music'"],
             valueRenderOption="FORMULA",
         )
         existing, layout, events, bumper = [
@@ -109,7 +123,7 @@ class HistorySheet:
         if venue_key not in venues and venue_key == "asc":
             venue_key = "atlanta swing classic"
         venue = venues.get(venue_key, playlist.event)
-        bumpers = {song_key(*row[:2]) for row in bumper if len(row) >= 2}
+        bumpers = bumper_song_keys(bumper)
         day = (playlist.played_on - date(1899, 12, 30)).days
         first = max(len(existing), 1) if current else 1
         end = first + len(tracks)

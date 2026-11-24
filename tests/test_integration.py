@@ -27,6 +27,7 @@ class FakeAPIs:
         self.downloads = []
         self.playlist_items = []
         self.list_pages = []
+        self.bumper_rows = [["Song", "Artist"], ["First Song", "Test Artist"]]
 
     def send(self, request, **options):
         uri = urlsplit(request.url)
@@ -74,7 +75,7 @@ class FakeAPIs:
             formulas = ["", "", "", "", "", "=F2", "=G2", "=H2", "=I2", "", "", "=ROW()-1"]
             return self.response({"valueRanges": [
                 {"values": [["Existing"]] * self.row_count}, {"values": [HEADERS, formulas]},
-                {"values": [["Example"]]}, {"values": [["First Song", "Test Artist"]]},
+                {"values": [["Example"]]}, {"values": self.bumper_rows},
             ]})
         if method == "GET" and "ranges" in query:
             return self.response({"sheets": [{"data": [{
@@ -201,6 +202,23 @@ class CronIntegrationTests(unittest.TestCase):
         ])
         highlight = next(r["repeatCell"] for r in requests if "repeatCell" in r)
         self.assertEqual((highlight["range"]["startColumnIndex"], highlight["range"]["endColumnIndex"]), (0, 12))
+
+    def test_bumper_columns_are_found_by_header(self):
+        for headers, entry in (
+            (["Artist", "Song"], ["Test Artist", "First Song"]),
+            (["Notes", " Artist ", "", "SONG"], ["Note", "Test Artist", "", "First Song"]),
+        ):
+            with self.subTest(headers=headers):
+                api = FakeAPIs({
+                    "part1": "2026.10.09 01 Example [DH].m3u",
+                    "part2": "2026.10.09 02 Example [DH].m3u",
+                })
+                api.bumper_rows = [headers, entry, ["Incomplete row"]]
+                self.assertEqual(self.run_cron(api), 0)
+                matching, other = api.sheet_writes
+                [highlight] = [request["repeatCell"] for request in matching if "repeatCell" in request]
+                self.assertEqual(highlight["range"]["endColumnIndex"], 12)
+                self.assertFalse(any("repeatCell" in request for request in other))
 
     def test_spotify_write_failure_saves_red_x_and_history_still_runs(self):
         api = FakeAPIs({"mixed": "2026.10.10 Example [S; DH].m3u"})
