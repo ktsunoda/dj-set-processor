@@ -28,7 +28,7 @@ def main():
             history = HistorySheet(session, os.environ["DJ_SET_SPREADSHEET_ID"])
             outputs = {"DH": history}
             if any(os.environ.get(name) for name in SETTINGS):
-                outputs["S"] = SpotifyPlaylist(stack.enter_context(Session()))
+                outputs["P"] = SpotifyPlaylist(stack.enter_context(Session()))
             return run_workflows(list(drive.files()), drive.download, drive.rename, outputs)
     except Exception as error:
         logging.error("Job setup or Drive listing failed (%s)", type(error).__name__)

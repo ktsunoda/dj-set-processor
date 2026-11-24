@@ -11,7 +11,7 @@ class SpotifyOutputTests(unittest.TestCase):
         output.access_token = Mock(return_value="access")
         output.search = Mock(side_effect=["spotify:track:matched", None])
         output.api = Mock(side_effect=[{"id": "test"}, {"snapshot_id": "one"}, {"snapshot_id": "two"}])
-        playlist = parse_filename("id", "2026.10.10 01 Event [DH ✅; S].m3u")
+        playlist = parse_filename("id", "2026.10.10 01 Event [DH ✅; P].m3u")
         matched = {"artist": "Artist", "title": "Track"}
         unmatched = {"artist": "Artist", "title": "Missing"}
         output(playlist, [matched] * 100 + [unmatched, matched])
