@@ -15,3 +15,5 @@ Use a Spotify Developer Dashboard app that the playlist owner's account can auth
 A bare `SP` enables a Spotify attempt when the collector has Spotify configuration. It creates a private playlist from matching tracks, in set order, with repeats. Unmatched plays are skipped and counted in logs. A set with no matching tracks fails without creating a playlist.
 
 Matching prefers the original title and artist credit. When filtered search does not yield a verified match, the collector also tries a plain-text search with the title and artist together. Both searches check Spotify's artist credits and retain version labels such as Radio Edit, Live, and Remix.
+
+If Spotify omits a collaborator, the collector can accept a single recording with the same title and version and the lead artist credited. If multiple distinct recordings qualify for this fallback, the play stays unmatched.

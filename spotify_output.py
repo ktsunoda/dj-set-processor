@@ -96,6 +96,9 @@ class SpotifyPlaylist:
         queries.extend(f"{FEATURED.sub('', name)} {artist}" for name in names)
 
         fallback = None
+        lead_matches = {}
+        allow_lead_match = lead != artist or bool(featured)
+        lead_credit = normalized(lead)
         for index, query in enumerate(dict.fromkeys(queries)):
             results = self.api(
                 "GET", "/search", access_token,
@@ -105,13 +108,21 @@ class SpotifyPlaylist:
                 artists = {normalized(entry["name"]) for entry in item["artists"]}
                 if normalized(item["name"]) in exact_titles and normalized(artist) in artists:
                     return item["uri"]
-                if (fallback is None and title_key(item["name"]) in title_keys
-                        and credits_match(artist, artists)
+                if title_key(item["name"]) not in title_keys:
+                    continue
+                if (fallback is None and credits_match(artist, artists)
                         and all(credits_match(name, artists) for name in featured)):
                     fallback = item["uri"]
+                if allow_lead_match and lead_credit in artists:
+                    uri = item["uri"]
+                    recording = (item.get("external_ids", {}).get("isrc")
+                                 or item.get("linked_from", {}).get("uri") or uri)
+                    lead_matches.setdefault(recording, uri)
             if fallback is not None and index >= exact_query_count - 1:
                 return fallback
-        return fallback
+        if len(lead_matches) == 1:
+            return next(iter(lead_matches.values()))
+        return None
 
     def __call__(self, playlist, tracks):
         token = self.access_token()

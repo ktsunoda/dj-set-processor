@@ -90,6 +90,33 @@ class SpotifyOutputTests(unittest.TestCase):
         ]}})
         self.assertIsNone(output.search("access", "Sickick", "I Can Feel It", ""))
 
+    def test_unique_lead_artist_recovers_missing_collaborator(self):
+        output = SpotifyPlaylist(Mock())
+        output.api = Mock(return_value={"tracks": {"items": [
+            self.candidate("cover", "Aliens Need Love Too", "Another Artist"),
+            self.candidate("live", "Aliens Need Love Too - Live", "Phlake"),
+            self.candidate("match", "Aliens Need Love Too", "Phlake"),
+        ]}})
+        self.assertEqual(output.search("access", "Phlake & Mercedes the Virus",
+                                       "Aliens Need Love Too", ""), "match")
+
+    def test_lead_artist_fallback_skips_distinct_recordings(self):
+        output = SpotifyPlaylist(Mock())
+        output.api = Mock(side_effect=[
+            {"tracks": {"items": [self.candidate("one", "Song", "Artist")]}},
+            {"tracks": {"items": [self.candidate("two", "Song", "Artist")]}},
+            {"tracks": {"items": []}},
+        ])
+        self.assertIsNone(output.search("access", "Artist & Guest", "Song", ""))
+
+    def test_lead_artist_fallback_accepts_releases_of_same_recording(self):
+        output = SpotifyPlaylist(Mock())
+        candidates = [self.candidate(uri, "Song - Radio Edit", "Artist") for uri in ("single", "album")]
+        for candidate in candidates:
+            candidate["external_ids"] = {"isrc": "TEST00000001"}
+        output.api = Mock(return_value={"tracks": {"items": candidates}})
+        self.assertEqual(output.search("access", "Artist & Guest", "Song (Radio Edit)", ""), "single")
+
     def test_creates_private_playlist_and_preserves_repeats_across_batches(self):
         output = SpotifyPlaylist(Mock())
         output.access_token = Mock(return_value="access")
