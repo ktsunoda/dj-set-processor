@@ -28,6 +28,15 @@ Each attempt creates and populates a new playlist named `YYYY.MM.DD Event`. For 
 
 ## Verification
 
+Run the offline regression suite before deploying code changes.
+
+```sh
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
+```
+
+The integration tests invoke the cron entry point and replace HTTP responses in memory. They cover the tag combinations, ordering, reruns, Sheets write requests, Spotify playlist creation requests, and failure handling without credentials or live writes. Use a live smoke test for changes to credentials, Google workbook templates, external API behavior, or Render configuration and notifications.
+
 Reuse the VirtualDJ parser from `m3u-processor` and the Drive listing and download patterns from Westie Radio. Keep the service-account key in Render Secret Files. Confirm Drive listing, download, and rename access and workbook editing access. Inspect a representative year tab, `Event Details`, and `Bumper Music` for column mappings, formulas, and venue aliases, including `ASC`.
 
 Use a disposable playlist and test workbook to verify ordering, repeated plays, year-tab creation, formulas, full-row highlighting, and filename sync back to the Mac. Test that successful and failed tokens are skipped, that clearing a marker requests only its workflow, and that either workflow can finish while the other is marked failed. Verify that a status rename failure stops work on the affected file and is reported as a run failure.

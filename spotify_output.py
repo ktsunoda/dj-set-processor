@@ -82,7 +82,7 @@ class SpotifyPlaylist:
             raise ValueError("Spotify found no matching tracks")
         result = self.api(
             "POST", "/me/playlists", token,
-            json={"name": playlist.spotify_name, "public": False},
+            json={"name": playlist.spotify_name, "public": False, "description": ""},
         )
         path = f"/playlists/{result['id']}/items"
         for start in range(0, len(uris), 100):

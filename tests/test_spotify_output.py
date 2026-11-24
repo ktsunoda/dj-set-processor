@@ -16,7 +16,8 @@ class SpotifyOutputTests(unittest.TestCase):
         unmatched = {"artist": "Artist", "title": "Missing"}
         output(playlist, [matched] * 100 + [unmatched, matched])
         self.assertEqual(output.api.call_args_list, [
-            call("POST", "/me/playlists", "access", json={"name": "2026.10.10 Event", "public": False}),
+            call("POST", "/me/playlists", "access",
+                 json={"name": "2026.10.10 Event", "public": False, "description": ""}),
             call("POST", "/playlists/test/items", "access", json={"uris": ["spotify:track:matched"] * 100}),
             call("POST", "/playlists/test/items", "access", json={"uris": ["spotify:track:matched"]}),
         ])
