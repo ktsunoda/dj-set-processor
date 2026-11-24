@@ -1,12 +1,16 @@
-"""Run the DJ History workflow against a configured Drive folder and workbook."""
+"""Run the tagged DJ Set Processor workflows against a configured Drive folder and workbook."""
 
 import logging
 import os
 
+from contextlib import ExitStack
+
+from requests import Session
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
 
 from google_outputs import DriveFolder, HistorySheet
+from spotify_output import SETTINGS, SpotifyPlaylist
 from workflow import run_workflows
 
 
@@ -18,10 +22,14 @@ def main():
         credentials = Credentials.from_service_account_file(
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"], scopes=scopes
         )
-        with AuthorizedSession(credentials, refresh_timeout=15) as session:
+        with ExitStack() as stack:
+            session = stack.enter_context(AuthorizedSession(credentials, refresh_timeout=15))
             drive = DriveFolder(session, os.environ["DJ_SET_DRIVE_FOLDER_ID"])
             history = HistorySheet(session, os.environ["DJ_SET_SPREADSHEET_ID"])
-            return run_workflows(list(drive.files()), drive.download, drive.rename, {"DH": history})
+            outputs = {"DH": history}
+            if any(os.environ.get(name) for name in SETTINGS):
+                outputs["S"] = SpotifyPlaylist(stack.enter_context(Session()))
+            return run_workflows(list(drive.files()), drive.download, drive.rename, outputs)
     except Exception as error:
         logging.error("Job setup or Drive listing failed (%s)", type(error).__name__)
         return 1

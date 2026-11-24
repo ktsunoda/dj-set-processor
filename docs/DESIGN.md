@@ -24,7 +24,7 @@ If a status rename fails, stop work on that file and continue with other files. 
 
 ## Spotify
 
-Each attempt creates and populates a new playlist named `YYYY.MM.DD - Event`. For example, `2026.10.10 01 Atlanta Swing Classic [DH ✅; S].m3u` creates `2026.10.10 - Atlanta Swing Classic`. Parts and repeat attempts can create separate playlists with the same name. A manual retry after a partial write can create another playlist.
+Each attempt creates and populates a new playlist named `YYYY.MM.DD Event`. For example, `2026.10.10 01 Atlanta Swing Classic [DH ✅; S].m3u` creates `2026.10.10 Atlanta Swing Classic`. Parts and repeat attempts can create separate playlists with the same name. A manual retry after a partial write can create another playlist.
 
 ## Verification
 

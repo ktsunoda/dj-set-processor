@@ -29,7 +29,7 @@ class SetFile:
 
     @property
     def spotify_name(self):
-        return f"{self.played_on:%Y.%m.%d} - {self.event}"
+        return f"{self.played_on:%Y.%m.%d} {self.event}"
 
     def filename(self, tokens):
         closing = ")" if self.delimiter == "(" else "]"

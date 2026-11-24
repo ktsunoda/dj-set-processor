@@ -7,7 +7,7 @@ from workflow import parse_filename, run_workflows
 class WorkflowTests(unittest.TestCase):
     def test_playlist_name_omits_sequence_and_tags(self):
         playlist = parse_filename("id", "2026.10.10 01 Atlanta Swing Classic [DH ✅; S].m3u")
-        self.assertEqual(playlist.spotify_name, "2026.10.10 - Atlanta Swing Classic")
+        self.assertEqual(playlist.spotify_name, "2026.10.10 Atlanta Swing Classic")
 
     def test_failed_output_is_saved_before_other_output_runs(self):
         rename = Mock()
