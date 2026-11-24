@@ -18,8 +18,8 @@ If a status rename fails, stop work on that file and continue with other files. 
 ## DJ History
 
 - Parse `YYYY.MM.DD`, an optional two-digit sequence immediately after the date, and the event name. Process dates oldest first and parts of the same date and event in numeric sequence. Report duplicate sequence numbers or mixed numbered and unnumbered files in the same group before writing that group.
-- Append every play in source order, preserving repeats, to the tab named for the year in the filename. If the tab is missing, copy the prior year's row 1 values and formatting, including row height and column widths. Use the prior year's row 2 as the template for song-row formatting and formulas. Report a missing prior-year template as a failure.
-- Start a new tab's song rows at row 2. Fill title, artist, duration, date, and venue. Apply native Sheets formulas with adjusted row references and preserve lookups into `Event Details`. Leave Spotify and Competition blank.
+- Append every play in source order, preserving repeats, to the tab named for the year in the filename. If the tab is missing, create it at the far left and copy the prior year's row 1 values and formatting, including row height and column widths. Use the prior year's row 2 as the template for song-row formatting and formulas. Report a missing prior-year template as a failure.
+- Start a new tab's song rows at row 2. Fill title, artist, duration, date, and venue. Store duration as text in `m:ss` format, rounding to whole seconds. Apply native Sheets formulas with adjusted row references and preserve lookups into `Event Details`. Leave Spotify and Competition blank.
 - Match title and artist against `Bumper Music`, ignoring capitalization and extra whitespace while keeping version and remix distinctions. Apply a light amber fill across the full imported row, including Spotify and Competition. Apply it once so manual edits to the fill or row persist.
 
 ## Spotify
