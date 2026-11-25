@@ -22,6 +22,8 @@ Files with no pending tags are skipped. The processor handles older dates first 
 
 After an attempt, the processor renames the file with `✅` for success or `❌` for failure. For example, `[DH ✅; SP ❌]` means Sheets succeeded and Spotify needs review. Remove just the relevant emoji to request that workflow again. A retry can append the same plays or create another Spotify playlist with the same name. If the output succeeded but the Drive rename failed, check the destination before retrying. Spotify may skip unmatched tracks and reports the count in its logs.
 
+`SP ⛔️` means Spotify rejected the refresh token. The first detection fails the run so Render can send its usual failure email. As long as a blocked tag exists, each run checks authorization once before processing exports and stays quiet if Spotify still rejects the token. Update the Spotify refresh token in Render and leave the blocked tags in place. The next scheduled run with working authorization retries them automatically. History imports can continue during the outage.
+
 ## Set up your accounts
 
 1. Create a Google Cloud service account and enable the **Google Drive API** and **Google Sheets API** in its project. Save its JSON key outside this checkout. [Google service-account setup](https://developers.google.com/workspace/guides/create-credentials#create_a_service_account)

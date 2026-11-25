@@ -15,6 +15,8 @@ Process pending tokens in the listed order. After each attempt, immediately save
 
 If a status rename fails, stop work on that file and continue with other files. Log whether the output was written and that the pending token may run again if Drive did not save the marker. Any failure makes the run exit nonzero, even if all other work succeeds. Enable email and select **Only failure notifications** for the Render cron job so the user gets an email for every failed run. A run with no pending work succeeds. Keep credentials, private configuration, and playlist contents out of Git and logs.
 
+Spotify's refresh-token `invalid_grant` response marks pending Spotify exports `SP ⛔️` and fails the first run. The blocked tags record the outage. While any remain, a single authorization check determines whether Spotify exports can proceed. If Spotify still returns `invalid_grant`, additional pending exports receive the same marker without another failure alert for the outage. A successful check makes blocked exports eligible in their original processing order. An unexpected check failure leaves Spotify tags in place and fails the run. History imports remain eligible throughout.
+
 ## DJ History
 
 - Parse `YYYY.MM.DD`, an optional two-digit sequence immediately after the date, and the event name. Process dates oldest first and parts of the same date and event in numeric sequence. Report duplicate sequence numbers or mixed numbered and unnumbered files in the same group before writing that group.

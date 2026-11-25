@@ -23,6 +23,8 @@ class FakeAPIs:
         self.row_count = 2
         self.current_file = None
         self.fail_spotify_items = False
+        self.spotify_refresh_error = None
+        self.spotify_refreshes = 0
         self.fail_rename_for = None
         self.downloads = []
         self.playlist_items = []
@@ -96,6 +98,10 @@ class FakeAPIs:
     def spotify(self, method, path, request):
         if method == "POST" and path == "/api/token":
             assert request.headers["Authorization"].startswith("Basic ")
+            self.spotify_refreshes += 1
+            if self.spotify_refresh_error is not None:
+                status, error = self.spotify_refresh_error
+                return self.response({"error": error}, status=status)
             return self.response({"access_token": "test-access"})
         assert request.headers["Authorization"] == "Bearer test-access"
         if method == "GET" and path == "/v1/search":
@@ -139,6 +145,52 @@ class CronIntegrationTests(unittest.TestCase):
             patch("requests.Session.send", side_effect=api.send),
         ):
             return main()
+
+    def test_spotify_reauthorization_blocks_once_then_recovers(self):
+        api = FakeAPIs({
+            "mixed": "2026.10.10 01 Example [SP; DH].m3u",
+            "second": "2026.10.10 02 Example (SP).m3u",
+        })
+        api.spotify_refresh_error = (400, "invalid_grant")
+        with self.assertLogs("workflow", level="ERROR") as logs:
+            self.assertEqual(self.run_cron(api), 1)
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("Reauthorize Spotify", logs.output[0])
+        self.assertEqual(api.spotify_refreshes, 1)
+        self.assertEqual(api.actions, [("mixed", "DH")])
+        self.assertEqual(api.files["mixed"], "2026.10.10 01 Example [SP ⛔️; DH ✅].m3u")
+        self.assertEqual(api.files["second"], "2026.10.10 02 Example (SP ⛔️).m3u")
+        self.assertEqual(api.downloads, ["mixed"])
+
+        api.files["new"] = "2026.10.11 Example [DH; SP].m3u"
+        with self.assertLogs("workflow", level="INFO") as logs:
+            self.assertEqual(self.run_cron(api), 0)
+        self.assertEqual(logs.output, ["INFO:workflow:Spotify authorization is still blocked"])
+        self.assertEqual(api.spotify_refreshes, 2)
+        self.assertEqual(api.actions, [("mixed", "DH"), ("new", "DH")])
+        self.assertEqual(api.files["new"], "2026.10.11 Example [DH ✅; SP ⛔️].m3u")
+        self.assertEqual(api.downloads, ["mixed", "new"])
+
+        api.spotify_refresh_error = None
+        self.assertEqual(self.run_cron(api), 0)
+        self.assertEqual(api.actions, [
+            ("mixed", "DH"), ("new", "DH"), ("mixed", "SP"), ("second", "SP"), ("new", "SP"),
+        ])
+        self.assertEqual(api.files["mixed"], "2026.10.10 01 Example [SP ✅; DH ✅].m3u")
+        self.assertEqual(api.files["second"], "2026.10.10 02 Example (SP ✅).m3u")
+        self.assertEqual(api.files["new"], "2026.10.11 Example [DH ✅; SP ✅].m3u")
+
+    def test_other_refresh_error_preserves_blocked_and_pending_tags(self):
+        api = FakeAPIs({
+            "blocked": "2026.10.10 Example (SP ⛔️).m3u",
+            "new": "2026.10.11 Example [SP; DH].m3u",
+        })
+        api.spotify_refresh_error = (503, "temporarily_unavailable")
+        self.assertEqual(self.run_cron(api), 1)
+        self.assertEqual(api.spotify_refreshes, 1)
+        self.assertEqual(api.actions, [("new", "DH")])
+        self.assertEqual(api.files["blocked"], "2026.10.10 Example (SP ⛔️).m3u")
+        self.assertEqual(api.files["new"], "2026.10.11 Example [SP; DH ✅].m3u")
 
     def test_tag_matrix_sequence_and_second_run(self):
         api = FakeAPIs({

@@ -8,6 +8,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 
+from spotify_output import SpotifyReauthorizationRequired
 from virtualdj import parse_m3u
 
 LOGGER = logging.getLogger(__name__)
@@ -15,6 +16,8 @@ TAG_GROUP = re.compile(r" (?P<group>\([^()]*\)|\[[^\[\]]*\])\.m3u$")
 SET_NAME = re.compile(r"(?P<date>[0-9]{4}\.[0-9]{2}\.[0-9]{2}) (?:(?P<part>[0-9]{2}) )?(?P<event>.+)")
 WORKFLOWS = ("DH", "SP")
 VALID_TOKENS = {code + marker for code in WORKFLOWS for marker in ("", " ✅", " ❌")}
+SPOTIFY_BLOCKED = "SP ⛔️"
+VALID_TOKENS.add(SPOTIFY_BLOCKED)
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,8 @@ def parse_filename(file_id, filename):
     if group is None:
         return None
     tokens = tuple(token.strip() for token in group["group"][1:-1].split(";"))
-    if not any(token in WORKFLOWS for token in tokens):
+    tokens = tuple(SPOTIFY_BLOCKED if token == "SP ⛔" else token for token in tokens)
+    if not any(token in WORKFLOWS or token == SPOTIFY_BLOCKED for token in tokens):
         return None
     if any(token not in VALID_TOKENS for token in tokens):
         raise ValueError("Invalid workflow token")
@@ -57,7 +61,7 @@ def parse_filename(file_id, filename):
     return SetFile(file_id, stem, group["group"][0], tokens, played_on, part, fields["event"].strip())
 
 
-def run_workflows(files, download, rename, outputs):
+def run_workflows(files, download, rename, outputs, *, check_spotify_auth=None):
     """Run configured output callbacks and return a process exit code.
 
     Files are (Drive ID, filename) pairs. Each output receives a SetFile
@@ -72,8 +76,27 @@ def run_workflows(files, download, rename, outputs):
             LOGGER.error("Filename validation failed")
             failed = True
             continue
-        if playlist is not None and any(token in outputs for token in playlist.tokens):
+        if playlist is not None and (
+            any(token in outputs for token in playlist.tokens)
+            or (check_spotify_auth is not None and SPOTIFY_BLOCKED in playlist.tokens)
+        ):
             playlists.append(playlist)
+
+    spotify_blocked = False
+    spotify_probe_failed = False
+    spotify_recovered = False
+    if check_spotify_auth is not None and any(SPOTIFY_BLOCKED in p.tokens for p in playlists):
+        try:
+            check_spotify_auth()
+        except SpotifyReauthorizationRequired:
+            spotify_blocked = True
+            LOGGER.info("Spotify authorization is still blocked")
+        except Exception:
+            spotify_probe_failed = True
+            failed = True
+            LOGGER.error("Spotify authorization check failed")
+        else:
+            spotify_recovered = True
 
     history_parts = {}
     if "DH" in outputs:
@@ -91,33 +114,51 @@ def run_workflows(files, download, rename, outputs):
     ))
     for playlist in playlists:
         tracks = None
-        stage = "download"
-        try:
-            contents = download(playlist.file_id)
-            stage = "parse"
-            tracks = parse_m3u(contents)
-            if not tracks:
-                raise ValueError("Playlist contains no tracks")
-        except Exception:
-            tracks = None
-            LOGGER.error("Playlist %s failed", stage)
+        if (
+            ("DH" in playlist.tokens and "DH" in outputs)
+            or ("SP" in outputs and not spotify_blocked and not spotify_probe_failed
+                and ("SP" in playlist.tokens
+                     or (spotify_recovered and SPOTIFY_BLOCKED in playlist.tokens)))
+        ):
+            stage = "download"
+            try:
+                contents = download(playlist.file_id)
+                stage = "parse"
+                tracks = parse_m3u(contents)
+                if not tracks:
+                    raise ValueError("Playlist contains no tracks")
+            except Exception:
+                tracks = None
+                LOGGER.error("Playlist %s failed", stage)
 
         tokens = list(playlist.tokens)
-        for index, token in enumerate(playlist.tokens):
-            if token not in WORKFLOWS or token not in outputs:
+        for index, original in enumerate(playlist.tokens):
+            token = "SP" if original == SPOTIFY_BLOCKED and spotify_recovered else original
+            if token not in outputs or (token == "SP" and spotify_probe_failed):
                 continue
             success = False
             if token == "DH" and (playlist.played_on, playlist.event) in ambiguous:
                 LOGGER.error("DH ordering validation failed")
-            elif tracks is not None:
+            elif tracks is not None and not (token == "SP" and spotify_blocked):
                 try:
                     outputs[token](playlist, tracks)
+                except SpotifyReauthorizationRequired:
+                    LOGGER.error(
+                        "Spotify rejected the refresh token. Reauthorize Spotify to resume exports."
+                    )
+                    spotify_blocked = True
+                    failed = True
                 except Exception:
                     LOGGER.error("%s output failed", token)
                 else:
                     success = True
-            failed |= not success
-            tokens[index] = f"{token} {'✅' if success else '❌'}"
+            if token == "SP" and spotify_blocked:
+                if original == SPOTIFY_BLOCKED:
+                    continue
+                tokens[index] = SPOTIFY_BLOCKED
+            else:
+                failed |= not success
+                tokens[index] = f"{token} {'✅' if success else '❌'}"
             try:
                 rename(playlist.file_id, playlist.filename(tokens))
             except Exception:

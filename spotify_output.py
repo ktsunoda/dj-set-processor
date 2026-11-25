@@ -21,6 +21,10 @@ TRACKING_ROOM = re.compile(
 )
 
 
+class SpotifyReauthorizationRequired(Exception):
+    """Spotify rejected the configured refresh token with invalid_grant."""
+
+
 def normalized(value):
     return " ".join(value.casefold().split())
 
@@ -56,6 +60,13 @@ class SpotifyPlaylist:
             timeout=30,
         )
         if response.status_code != 200:
+            if response.status_code == 400:
+                try:
+                    error = response.json()
+                except ValueError:
+                    error = None
+                if isinstance(error, dict) and error.get("error") == "invalid_grant":
+                    raise SpotifyReauthorizationRequired
             LOGGER.error("Spotify token refresh failed (HTTP %s)", response.status_code)
             response.raise_for_status()
         tokens = response.json()

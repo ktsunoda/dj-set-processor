@@ -29,7 +29,11 @@ def main():
             outputs = {"DH": history}
             if any(os.environ.get(name) for name in SETTINGS):
                 outputs["SP"] = SpotifyPlaylist(stack.enter_context(Session()))
-            return run_workflows(list(drive.files()), drive.download, drive.rename, outputs)
+            spotify = outputs.get("SP")
+            return run_workflows(
+                list(drive.files()), drive.download, drive.rename, outputs,
+                check_spotify_auth=spotify.access_token if spotify is not None else None,
+            )
     except Exception as error:
         logging.error("Job setup or Drive listing failed (%s)", type(error).__name__)
         return 1
