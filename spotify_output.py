@@ -107,7 +107,9 @@ class SpotifyPlaylist:
         queries.extend(f"{FEATURED.sub('', name)} {artist}" for name in names)
 
         fallback = None
+        alias_matches = {}
         lead_matches = {}
+        source_credit = normalized(artist)
         allow_lead_match = lead != artist or bool(featured)
         lead_credit = normalized(lead)
         for index, query in enumerate(dict.fromkeys(queries)):
@@ -124,13 +126,19 @@ class SpotifyPlaylist:
                 if (fallback is None and credits_match(artist, artists)
                         and all(credits_match(name, artists) for name in featured)):
                     fallback = item["uri"]
+                uri = item["uri"]
+                recording = (item.get("external_ids", {}).get("isrc")
+                             or item.get("linked_from", {}).get("uri") or uri)
+                aliases = {alias.strip() for name in artists
+                           for alias in re.findall(r"\(([^()]+)\)$", name)}
+                if source_credit in aliases and all(credits_match(name, artists) for name in featured):
+                    alias_matches.setdefault(recording, uri)
                 if allow_lead_match and lead_credit in artists:
-                    uri = item["uri"]
-                    recording = (item.get("external_ids", {}).get("isrc")
-                                 or item.get("linked_from", {}).get("uri") or uri)
                     lead_matches.setdefault(recording, uri)
             if fallback is not None and index >= exact_query_count - 1:
                 return fallback
+        if alias_matches:
+            return next(iter(alias_matches.values())) if len(alias_matches) == 1 else None
         if len(lead_matches) == 1:
             return next(iter(lead_matches.values()))
         return None

@@ -32,6 +32,30 @@ class SpotifyOutputTests(unittest.TestCase):
                 query = output.api.call_args.kwargs["params"]["q"]
                 self.assertEqual(query, f"track:{catalog_title} artist:{credits[0]}")
 
+    def test_search_uses_unambiguous_parenthetical_artist_credit(self):
+        output = SpotifyPlaylist(Mock())
+        studio = self.candidate("studio", "If You're Over Me", "Olly Alexander (Years & Years)")
+        acoustic = self.candidate(
+            "acoustic", "If You're Over Me - Acoustic", "Olly Alexander (Years & Years)"
+        )
+        partial = self.candidate(
+            "partial", "If You're Over Me - Acoustic", "Another Artist (Years & Years Tribute)"
+        )
+        output.api = Mock(return_value={"tracks": {"items": [studio, partial, acoustic]}})
+        source_title = "If You're Over Me (Acoustic)"
+        self.assertEqual(output.search("access", "Years & Years", source_title, ""), "acoustic")
+
+        ambiguous = dict(acoustic, uri="another-recording")
+        output.api.return_value = {"tracks": {"items": [acoustic, ambiguous]}}
+        self.assertIsNone(output.search("access", "Years & Years", source_title, ""))
+
+    def test_search_matches_a_different_parenthetical_artist_credit(self):
+        output = SpotifyPlaylist(Mock())
+        candidate = self.candidate("match", "Evening Lights", "New Name (Former Name)")
+        output.api = Mock(return_value={"tracks": {"items": [candidate]}})
+
+        self.assertEqual(output.search("access", "former  NAME", "Evening Lights", ""), "match")
+
     def test_search_keeps_explicit_versions_including_radio_edit(self):
         for version in ("Radio Edit", "Live", "Acoustic", "Stripped", "Club Remix"):
             with self.subTest(version=version):
