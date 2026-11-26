@@ -1,5 +1,7 @@
 # DJ Set Processor
 
+DJ Set Processor has moved to [Westie DJ Tools](https://github.com/ktsunoda/westie-dj-tools/tree/main/tools/dj-set-processor). Use that repository for current code, setup, and updates.
+
 Turn VirtualDJ history files in Google Drive into a play history in Google Sheets, a Spotify playlist, or both. A filename tag tells the processor what to do and records the result. Run it locally or on a schedule.
 
 ## Tag a set
